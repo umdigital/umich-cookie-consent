@@ -1,3 +1,8 @@
+1.1 (2018-07-16)
+================
+Change integration with MC GA plugin for no cookies state.
+- don't disable GA yet just disable GA cookies
+
 1.0 (2018-07-02)
 ================
 initial release
