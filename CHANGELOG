@@ -1,3 +1,7 @@
+1.1.1 (2018-10-15)
+==================
+Update country api to not use www
+
 1.1 (2018-07-16)
 ================
 Change integration with MC GA plugin for no cookies state.

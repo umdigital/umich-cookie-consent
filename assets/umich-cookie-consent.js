@@ -88,7 +88,7 @@
                             }
                     
                             return {
-                                url: 'https://www.umich.edu/apis/country/',
+                                url: 'https://umich.edu/apis/country/',
                                 callback: function( done, response ) {
                                     if( response.length == 2 ) {
                                         return { code: response };
