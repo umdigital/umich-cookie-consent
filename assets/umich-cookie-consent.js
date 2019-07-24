@@ -51,9 +51,8 @@
                 }                                                                                                           
             }
 
-            // load the plugin
-            window.cookieconsent.initialise({
-                cookie: window.cookieconsent.umconfig.cookie,
+            // PREPARE CC OPTIONS
+            var thisCCOptions = window.cookieconsent.utils.deepExtend({
                 palette: {
                     popup: {
                         background: "#00274c",
@@ -73,7 +72,13 @@
                 },
                 law: {
                     regionalLaw: false
-                },  
+                },
+                revokeBtn: '<div/>',
+            }, (window.umcookieconsent || {}) );
+
+            // add non overridable options
+            thisCCOptions = window.cookieconsent.utils.deepExtend( thisCCOptions, {
+                cookie: window.cookieconsent.umconfig.cookie,
                 location: {
                     services: ['umich'],
                     serviceDefinitions: {
@@ -81,25 +86,25 @@
                             var hasCookieStatus = window.cookieconsent.utils.getCookie(
                                 window.cookieconsent.umconfig.cookie.name
                             );
-            
+
                             // decision has already been made, don't need to do another country lookup
                             if( hasCookieStatus ) {
                                 return false;
                             }
-                    
+
                             return {
                                 url: 'https://umich.edu/apis/country/',
                                 callback: function( done, response ) {
                                     if( response.length == 2 ) {
                                         return { code: response };
                                     }
-                                    
+
                                     return new Error( 'Invalid country lookup response ('+ response +')' );
                                 }
                             };
-                        }
+                        }                                                                                                   
                     }
-                },  
+                },
                 onInitialise: function( status ) {
                     if( window.cookieconsent.umconfig.cookiesOkStatus.indexOf( status ) == -1 ) {
                         window.cookieconsent.utils.purgeCookies( this.options.cookie );
@@ -110,7 +115,7 @@
                         var hasCookieStatus = window.cookieconsent.utils.getCookie(
                             window.cookieconsent.umconfig.cookie.name
                         );
-                
+
                         // make sure the cookie was set before attempting to redirect
                         if( hasCookieStatus ) {
                             window.location = window.location;
@@ -118,22 +123,25 @@
                     }
                     else {
                         window.cookieconsent.utils.purgeCookies( this.options.cookie );
-                    }   
-                }   
-            }, function( result ){
+                    }
+                }
+            });
+
+            // load the plugin
+            window.cookieconsent.initialise( thisCCOptions, function( result ){
                 var hasCookieStatus = window.cookieconsent.utils.getCookie(
                     window.cookieconsent.umconfig.cookie.name
                 );
-                
+
                 // they don't need to agree, auto set status cookie to 'na'
                 if( !result.options.enabled && !hasCookieStatus ) {
                     result.setStatus( 'na' );
-                }   
+                }
                 // they need to agree and have not... purge cookies
                 else if( result.options.enabled && !hasCookieStatus ) {
                     window.cookieconsent.utils.purgeCookies( result.options.cookie );
-                }           
-            });                 
+                }
+            });
         }
     });
 }(jQuery));
