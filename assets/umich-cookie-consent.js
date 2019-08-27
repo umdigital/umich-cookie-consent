@@ -1,5 +1,15 @@
-(function($){
-    $(document).ready(function(){
+(function(){
+    ready( init );
+
+    function ready( fn ) {
+        if( document.attachEvent ? document.readyState === 'complete' : document.readyState !== 'loading' ){
+            fn();
+        } else {
+            document.addEventListener( 'DOMContentLoaded', fn );
+        }
+    }
+
+    function init(){
         // cookie consent
         if( window.cookieconsent ) {
             // add no notice required status (e.g. non EU request)
@@ -64,14 +74,10 @@
                     }
                 },
                 theme: "classic",
-                type : "opt-in",
                 content: {
                     dismiss: "Decline",
                     link   : "View our Privacy Notice",
                     href   : "http://umich.edu/about/privacy/"
-                },
-                law: {
-                    regionalLaw: false
                 },
                 revokeBtn: '<div/>',
             }, (window.umcookieconsent || {}) );
@@ -79,6 +85,10 @@
             // add non overridable options
             thisCCOptions = window.cookieconsent.utils.deepExtend( thisCCOptions, {
                 cookie: window.cookieconsent.umconfig.cookie,
+                type : "opt-in",
+                law: {
+                    regionalLaw: false
+                },
                 location: {
                     services: ['umich'],
                     serviceDefinitions: {
@@ -143,5 +153,5 @@
                 }
             });
         }
-    });
-}(jQuery));
+    }
+})();
