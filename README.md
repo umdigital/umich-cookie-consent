@@ -1,6 +1,7 @@
 Cookie Consent Message
 ======================
 Provides easy way to add GDPR compliant message to your site.  This will only show for IP's geolocated to an EU country.
+- Integrates cookie usage with [Google Site Kit](https://wordpress.org/plugins/google-site-kit/) plugin
 
 
 ### Actions

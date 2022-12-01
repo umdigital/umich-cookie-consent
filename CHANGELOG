@@ -1,3 +1,7 @@
+1.1.5 (2022-12-01)
+==================
+Add support for Google Site Kit (UA & GA4)
+
 1.1.4 (2019-08-27)
 ==================
 Remove jquery dependency (issue #1)
