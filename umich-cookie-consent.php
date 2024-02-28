@@ -3,7 +3,7 @@
  * Plugin Name: U-M Cookie Consent
  * Plugin URI: https://github.com/umdigital/umich-cookie-consent/
  * Description: Show GDPR compliant cookie consent message to EU gelocated users.
- * Version: 1.1.5
+ * Version: 2.0.0
  * Author: U-M: Digital
  * Author URI: http://vpcomm.umich.edu
  */
@@ -14,6 +14,10 @@ class UMichCookieConsent
 {
     static public function init()
     {
+        if( !class_exists( 'UMOneTrust' ) ) {
+            include_once UMCOOKIECONSENT_PATH .'vendor'. DIRECTORY_SEPARATOR .'umonetrust.php';
+        }
+
         // UPDATER SETUP
         if( !class_exists( 'WP_GitHub_Updater' ) ) {
             include_once UMCOOKIECONSENT_PATH .'vendor'. DIRECTORY_SEPARATOR .'updater.php';
@@ -48,28 +52,16 @@ class UMichCookieConsent
             ));
         }
 
-        add_action( 'wp_enqueue_scripts', function(){
-            wp_enqueue_script( 'insites-cookieconsent', plugins_url( 'vendor/cookieconsent-3.0.6/src/cookieconsent.js', __FILE__ ) );
-            wp_enqueue_script( 'umich-cookie-consent', plugins_url( 'assets/umich-cookie-consent.js', __FILE__ ) );
-
-            wp_enqueue_style( 'umich-cookie-consent', plugins_url( 'assets/umich-cookie-consent.css', __FILE__ ) );
-        });
-
+        // force script(s) as high up as possible
+        add_action( 'wp_head', function(){
+            echo '<script src="https://cdn.cookielaw.org/consent/03e0096b-3569-4b70-8a31-918e55aa20da/otSDKStub.js"  type="text/javascript" charset="UTF-8" data-domain-script="03e0096b-3569-4b70-8a31-918e55aa20da" ></script>';
+        }, 1 );
 
         // check for cookie consent cookie and execute appropriate action
-        $cookieStatus = isset( $_COOKIE['um_cookie_consent'] ) ? $_COOKIE['um_cookie_consent'] : '';
-
-        if( in_array( $cookieStatus, array( 'allow', 'na' ) ) ) {
-            do_action( 'umich_cookie_consent_allowed', $cookieStatus );
+        if( UMOneTrust::get('targeting') ) {
+            do_action( 'umich_cookie_consent_allowed', UMOneTrust::get() );
         }
         else {
-            // support the mc-google-analytics plugin
-            add_filter( 'mc_ga_create_options', function( $options ){
-                // disable cookies for GA
-                $options['storage'] = 'none';
-                return $options;
-            });
-
             // support Google Site Kit plugin (https://wordpress.org/plugins/google-site-kit/)
             add_filter( 'googlesitekit_gtag_opt', function( $opts ){
                 wp_add_inline_script( 'google_gtagjs', 'gtag("consent", "default", {"ad_storage":"denied","analytics_storage":"denied"});' );
@@ -78,8 +70,18 @@ class UMichCookieConsent
                 return $opts;
             });
 
-            do_action( 'umich_cookie_consent_denied', $cookieStatus );
+            do_action( 'umich_cookie_consent_denied', UMOneTrust::get() );
         }
+
+        // default the privacy url
+        add_action( 'init', function(){
+            if( isset( $_SERVER['REQUEST_URI'] ) && is_string( $_SERVER['REQUEST_URI'] ) ) {
+                if( preg_match( '#/privacy/$#', parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ) ) && !url_to_postid( '/privacy/' ) ) {
+                    wp_redirect( 'https://umich.edu/about/privacy-statement/' );
+                    exit;
+                }
+            }
+        }, 99);
     }
 }
 UMichCookieConsent::init();

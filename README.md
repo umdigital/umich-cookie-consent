@@ -19,3 +19,23 @@ add_action( 'umich_cookie_consent_denied', function( $status ){
     // your code here to execute when cookies are denied
 });
 ```
+
+### OneTrust Cookie Library
+UMOneTrust
+
+**Get Raw Decoded Cookie Value**
+```
+UMOneTrust::get();
+```
+
+**Get Preference Group Value**
+```
+/* return preference value (boolean)
+ * Where $group is one of:
+ * - required
+ * - performance
+ * - functional
+ * - targeting
+ */
+UMOneTrust::get( $group );
+```

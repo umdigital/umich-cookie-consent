@@ -1,3 +1,8 @@
+2.0.0 (2024-02-28)
+==================
+Updated from custom Insites banner to OneTrust Cookie Consent Hosted service
+Removed deprecated UM Google Analytics UA Plugin integration
+
 1.1.5 (2022-12-01)
 ==================
 Add support for Google Site Kit (UA & GA4)
