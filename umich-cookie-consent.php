@@ -3,7 +3,7 @@
  * Plugin Name: U-M Cookie Consent
  * Plugin URI: https://github.com/umdigital/umich-cookie-consent/
  * Description: Show GDPR compliant cookie consent message to EU gelocated users.
- * Version: 2.0.0
+ * Version: 2.0.1
  * Author: U-M: Digital
  * Author URI: http://vpcomm.umich.edu
  */
@@ -54,22 +54,61 @@ class UMichCookieConsent
 
         // force script(s) as high up as possible
         add_action( 'wp_head', function(){
+            echo "\n";
             echo '<script src="https://cdn.cookielaw.org/consent/03e0096b-3569-4b70-8a31-918e55aa20da/otSDKStub.js"  type="text/javascript" charset="UTF-8" data-domain-script="03e0096b-3569-4b70-8a31-918e55aa20da" ></script>';
-        }, 1 );
+            echo "\n";
+            echo '<script type="text/javascript">
+            function OptanonWrapper(){
+                // performance
+                if( OnetrustActiveGroups.includes("C0002") ) {
+                    gtag( "consent", "update", {
+                        analytics_storage: "granted"
+                    });
+                }
+                // functional
+                if( OnetrustActiveGroups.includes("C0003") ) {
+                    gtag( "consent", "update", {
+                        functional_storage: "granted"
+                    });
+                }
+                // targeting
+                if( OnetrustActiveGroups.includes("C0004") ) {
+                    gtag( "consent", "update", {
+                        ad_storage             : "granted",
+                        ad_user_data           : "granted",
+                        ad_personalization     : "granted",
+                        personalization_storage: "granted"
+                    });
+                }
+            };
+            </script>';
+            echo "\n";
+        });
+
+        // support Google Site Kit plugin (https://wordpress.org/plugins/google-site-kit/)
+        add_filter( 'googlesitekit_gtag_opt', function( $opts ){
+            wp_add_inline_script( 'google_gtagjs', '
+            // Default ad_storage to "denied". 
+            gtag("consent", "default", { 
+                ad_storage             : "denied", 
+                analytics_storage      : "denied", 
+                functionality_storage  : "denied", 
+                personalization_storage: "denied", 
+                security_storage       : "denied",  
+                ad_user_data           : "denied",
+                ad_personalization     : "denied", 
+                wait_for_update        : 500 
+            });' );
+
+            $opts['storage'] = 'none';
+            return $opts;
+        });
 
         // check for cookie consent cookie and execute appropriate action
         if( UMOneTrust::get('targeting') ) {
             do_action( 'umich_cookie_consent_allowed', UMOneTrust::get() );
         }
         else {
-            // support Google Site Kit plugin (https://wordpress.org/plugins/google-site-kit/)
-            add_filter( 'googlesitekit_gtag_opt', function( $opts ){
-                wp_add_inline_script( 'google_gtagjs', 'gtag("consent", "default", {"ad_storage":"denied","analytics_storage":"denied"});' );
-
-                $opts['storage'] = 'none';
-                return $opts;
-            });
-
             do_action( 'umich_cookie_consent_denied', UMOneTrust::get() );
         }
 

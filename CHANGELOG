@@ -1,3 +1,8 @@
+2.0.1 (2024-03-01)
+==================
+Resolve issue setting GA4 consent preference when site behind caching server.
+Add workaround for OneTrust GA4 Consent bug.
+
 2.0.0 (2024-02-28)
 ==================
 Updated from custom Insites banner to OneTrust Cookie Consent Hosted service
