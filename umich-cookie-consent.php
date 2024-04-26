@@ -6,6 +6,7 @@
  * Version: 2.0.3
  * Author: U-M: Digital
  * Author URI: http://vpcomm.umich.edu
+ * Update URI: https://github.com/umdigital/umich-cookie-consent/releases/latest
  */
 
 define( 'UMCOOKIECONSENT_PATH', dirname( __FILE__ ) . DIRECTORY_SEPARATOR );
