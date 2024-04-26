@@ -3,7 +3,7 @@
  * Plugin Name: U-M Cookie Consent
  * Plugin URI: https://github.com/umdigital/umich-cookie-consent/
  * Description: Show GDPR compliant cookie consent message to EU gelocated users.
- * Version: 2.0.2
+ * Version: 2.0.3
  * Author: U-M: Digital
  * Author URI: http://vpcomm.umich.edu
  */
@@ -12,52 +12,54 @@ define( 'UMCOOKIECONSENT_PATH', dirname( __FILE__ ) . DIRECTORY_SEPARATOR );
 
 class UMichCookieConsent
 {
+    static private $_oneTrustCode = '03e0096b-3569-4b70-8a31-918e55aa20da';
+    static private $_options = [];
+
     static public function init()
     {
         if( !class_exists( 'UMOneTrust' ) ) {
-            include_once UMCOOKIECONSENT_PATH .'vendor'. DIRECTORY_SEPARATOR .'umonetrust.php';
+            include_once UMCOOKIECONSENT_PATH .'includes'. DIRECTORY_SEPARATOR .'umonetrust.php';
         }
 
-        // UPDATER SETUP
-        if( !class_exists( 'WP_GitHub_Updater' ) ) {
-            include_once UMCOOKIECONSENT_PATH .'vendor'. DIRECTORY_SEPARATOR .'updater.php';
+        // load updater library
+        if( file_exists( UMCOOKIECONSENT_PATH . implode( DIRECTORY_SEPARATOR, [ 'vendor', 'umdigital', 'wordpress-github-updater', 'github-updater.php' ] ) ) ) {
+            include UMCOOKIECONSENT_PATH . implode( DIRECTORY_SEPARATOR, [ 'vendor', 'umdigital', 'wordpress-github-updater', 'github-updater.php' ] );
         }
-        if( isset( $_GET['force-check'] ) && $_GET['force-check'] && !defined( 'WP_GITHUB_FORCE_UPDATE' ) ) {
-            define( 'WP_GITHUB_FORCE_UPDATE', true );
+        else if( file_exists( UMCOOKIECONSENT_PATH .'includes'. DIRECTORY_SEPARATOR .'github-updater.php' ) ) {
+            include UMCOOKIECONSENT_PATH .'includes'. DIRECTORY_SEPARATOR .'github-updater.php';
         }
-        if( is_admin() ) {
-            new WP_GitHub_Updater(array(
-                // this is the slug of your plugin
-                'slug' => plugin_basename(__FILE__),
-                // this is the name of the folder your plugin lives in
-                'proper_folder_name' => dirname( plugin_basename( __FILE__ ) ),
-                // the github API url of your github repo
-                'api_url' => 'https://api.github.com/repos/umdigital/umich-cookie-consent',
-                // the github raw url of your github repo
-                'raw_url' => 'https://raw.githubusercontent.com/umdigital/umich-cookie-consent/master',
-                // the github url of your github repo
-                'github_url' => 'https://github.com/umdigital/umich-cookie-consent',
-                 // the zip url of the github repo
-                'zip_url' => 'https://github.com/umdigital/umich-cookie-consent/zipball/master',
-                // wether WP should check the validity of the SSL cert when getting an update, see https://github.com/jkudish/WordPress-GitHub-Plugin-Updater/issues/2 and https://github.com/jkudish/WordPress-GitHub-Plugin-Updater/issues/4 for details
-                'sslverify' => true,
-                // which version of WordPress does your plugin require?
-                'requires' => '3.0',
-                // which version of WordPress is your plugin tested up to?
-                'tested' => '3.9.1',
-                // which file to use as the readme for the version number
-                'readme' => 'README.md',
-                // Access private repositories by authorizing under Appearance > Github Updates when this example plugin is installed
-                'access_token' => '',
-            ));
+
+        // Initialize Github Updater
+        if( class_exists( '\Umich\GithubUpdater\Init' ) ) {
+            new \Umich\GithubUpdater\Init([
+                'repo' => 'umdigital/umich-cookie-consent',
+                'slug' => plugin_basename( __FILE__ ),
+            ]);
         }
+        // Show error upon failure
+        else {
+            add_action( 'admin_notices', function(){
+                echo '<div class="error notice"><h3>WARNING</h3><p>U-M: Cookie Consent plugin is currently unable to check for updates due to a missing dependency.  Please <a href="https://github.com/umdigital/umich-cookie-consent">reinstall the plugin</a>.</p></div>';
+            });
+        }
+
+        self::$_options = array_replace_recursive(
+            [ 'mode' => 'prod' ],
+            get_option( 'umich_cc_options' ) ?: []
+        );
 
         // force script(s) as high up as possible
         add_action( 'wp_head', function(){
             $topDomain = preg_replace( '/^(.*\.)?(.+\..+)$/', '$2', parse_url( get_site_url(), PHP_URL_HOST ) );
 
+            $otCode = apply_filters( 'umich_cc_onetrust_code', self::$_oneTrustCode );
+
+            if( self::$_options['mode'] != 'prod' ) {
+                $otCode .= '-test';
+            }
+
             echo "\n";
-            echo '<script src="https://cdn.cookielaw.org/consent/03e0096b-3569-4b70-8a31-918e55aa20da/otSDKStub.js"  type="text/javascript" charset="UTF-8" data-domain-script="03e0096b-3569-4b70-8a31-918e55aa20da" ></script>';
+            echo '<script src="https://cdn.cookielaw.org/consent/'. $otCode .'/otSDKStub.js"  type="text/javascript" charset="UTF-8" data-domain-script="'. $otCode .'" ></script>';
             echo "\n";
             echo '<script type="text/javascript">
             function OptanonWrapper(){
@@ -131,6 +133,44 @@ class UMichCookieConsent
                 }
             }
         }, 99);
+
+
+        /** ADMIN **/
+        add_action( 'admin_notices', function(){
+            if( self::$_options['mode'] != 'prod' ) {
+                echo '<div class="error notice"><h3>NOTICE</h3><p>U-M: Cookie Consent plugin is currently in development mode. <a href="'. admin_url( 'options-general.php?page=umich-cc' ) .'">Manage Settings</a></p></div>';
+            }
+        });
+
+        add_filter( 'plugin_action_links_'. plugin_basename(__FILE__), function( $links ){
+            return array_merge(
+                $links,
+                array(
+                    '<a href="'. admin_url( 'options-general.php?page=umich-cc' ) .'">Settings</a>'
+                )
+            );
+        });
+
+        add_action( 'admin_init', function(){
+            register_setting(
+                'umich-cc',
+                'umich_cc_options'
+            );
+        });
+
+        add_action( 'admin_menu', function(){
+            add_options_page(
+                'U-M: Cookie Consent',
+                'U-M: Cookie Consent',
+                'administrator',
+                'umich-cc',
+                function(){
+                    $umCCOptions = self::$_options;
+
+                    include UMCOOKIECONSENT_PATH .'templates'. DIRECTORY_SEPARATOR .'admin.tpl';
+                }
+            );
+        });
     }
 }
 UMichCookieConsent::init();

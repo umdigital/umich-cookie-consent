@@ -1,3 +1,8 @@
+2.0.3 (2024-04-26)
+==================
+Add settings page to control a test mode option
+Replace updater code
+
 2.0.2 (2024-03-13)
 ==================
 Auto remove GA4 cookies upon consent revocation
