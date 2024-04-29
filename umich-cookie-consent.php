@@ -3,7 +3,7 @@
  * Plugin Name: U-M Cookie Consent
  * Plugin URI: https://github.com/umdigital/umich-cookie-consent/
  * Description: Show GDPR compliant cookie consent message to EU gelocated users.
- * Version: 2.0.3
+ * Version: 2.0.4
  * Author: U-M: Digital
  * Author URI: http://vpcomm.umich.edu
  * Update URI: https://github.com/umdigital/umich-cookie-consent/releases/latest
@@ -93,14 +93,19 @@ class UMichCookieConsent
                         }
                     });
                 }
+
+                // trigger event for use in Tag Manager
+                window.dataLayer.push({ event: "um_consent_updated" });
             };
             </script>';
             echo "\n";
         });
 
         // support Google Site Kit plugin (https://wordpress.org/plugins/google-site-kit/)
-        add_filter( 'googlesitekit_gtag_opt', function( $opts ){
+        add_action( 'wp_enqueue_scripts', function(){
             wp_add_inline_script( 'google_gtagjs', '
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
             // Default ad_storage to "denied". 
             gtag("consent", "default", { 
                 ad_storage             : "denied", 
@@ -111,11 +116,8 @@ class UMichCookieConsent
                 ad_user_data           : "denied",
                 ad_personalization     : "denied", 
                 wait_for_update        : 500 
-            });' );
-
-            $opts['storage'] = 'none';
-            return $opts;
-        });
+            });', 'before' );
+        }, 30 );
 
         // check for cookie consent cookie and execute appropriate action
         if( UMOneTrust::get('targeting') ) {

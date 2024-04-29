@@ -1,3 +1,8 @@
+2.0.4 (2024-04-29)
+==================
+Add new GTM trigger event "um_consent_updated"
+Fix issue with consent defaults no longer being issued
+
 2.0.3 (2024-04-26)
 ==================
 Add settings page to control a test mode option
