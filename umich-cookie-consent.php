@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: U-M Cookie Consent
+ * Plugin Name: University of Michigan: Cookie Consent
  * Plugin URI: https://github.com/umdigital/umich-cookie-consent/
  * Description: Show GDPR compliant cookie consent message to EU gelocated users.
- * Version: 2.0.4
+ * Version: 2.0.5
  * Author: U-M: Digital
  * Author URI: http://vpcomm.umich.edu
  * Update URI: https://github.com/umdigital/umich-cookie-consent/releases/latest
@@ -13,7 +13,20 @@ define( 'UMCOOKIECONSENT_PATH', dirname( __FILE__ ) . DIRECTORY_SEPARATOR );
 
 class UMichCookieConsent
 {
-    static private $_oneTrustCode = '03e0096b-3569-4b70-8a31-918e55aa20da';
+    static private $_domains = [
+        'umich.edu'      => [
+            'code'    => '03e0096b-3569-4b70-8a31-918e55aa20da',
+            'privacy' => 'https://umich.edu/about/privacy-statement/',
+        ],
+        'umflint.edu'    => [
+            'code'    => '018f776d-a3b7-74f3-8fec-065496d9a96f',
+            'privacy' => 'https://umflint.edu/about/privacy/',
+        ],
+        'umdearborn.edu' => [
+            'code'    => '018f779a-dc12-7048-a377-bb381a930bf2',
+            'privacy' => 'https://umdearborn.edu/privacy-policy',
+        ]
+    ];
     static private $_options = [];
 
     static public function init()
@@ -51,12 +64,26 @@ class UMichCookieConsent
 
         // force script(s) as high up as possible
         add_action( 'wp_head', function(){
-            $topDomain = preg_replace( '/^(.*\.)?(.+\..+)$/', '$2', parse_url( get_site_url(), PHP_URL_HOST ) );
+            $topDomain = self::_detectDomain( true );
 
-            $otCode = apply_filters( 'umich_cc_onetrust_code', self::$_oneTrustCode );
+            $otCode = false;
+
+            if( isset( self::$_domains[ $topDomain ]['code'] ) ) {
+                $otCode = self::$_domains[ $topDomain ]['code'];
+            }
+
+            $otCode = apply_filters( 'umich_cc_onetrust_code', $otCode, $topDomain );
 
             if( self::$_options['mode'] != 'prod' ) {
+                if( !$otCode ) {
+                    $otCode = self::$_domains['umich.edu']['code'];
+                }
+
                 $otCode .= '-test';
+            }
+
+            if( !$otCode ) {
+                return;
             }
 
             echo "\n";
@@ -130,9 +157,13 @@ class UMichCookieConsent
         // default the privacy url
         add_action( 'init', function(){
             if( isset( $_SERVER['REQUEST_URI'] ) && is_string( $_SERVER['REQUEST_URI'] ) ) {
-                if( preg_match( '#/privacy/$#', parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ) ) && !url_to_postid( '/privacy/' ) ) {
-                    wp_redirect( 'https://umich.edu/about/privacy-statement/' );
-                    exit;
+                if( preg_match( '#^/privacy/?$#', parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ) ) && !url_to_postid( '/privacy/' ) ) {
+                    $topDomain = self::_detectDomain( true );
+
+                    if( isset( self::$_domains[ $topDomain ]['privacy'] ) ) {
+                        wp_redirect( self::$_domains[ $topDomain ]['privacy'] );
+                        exit;
+                    }
                 }
             }
         }, 99);
@@ -168,12 +199,33 @@ class UMichCookieConsent
                 'administrator',
                 'umich-cc',
                 function(){
-                    $umCCOptions = self::$_options;
+                    $umCCOptions    = self::$_options;
+                    $umCCDomains    = array_keys( self::$_domains );
+                    $umCCAutodetect = 'None';
+
+                    if( $topDomain = self::_detectDomain() ) {
+                        $umCCAutodetect = $topDomain;
+                    }
 
                     include UMCOOKIECONSENT_PATH .'templates'. DIRECTORY_SEPARATOR .'admin.tpl';
                 }
             );
         });
+    }
+
+    static private function _detectDomain( $useConfig = false )
+    {
+        $topDomain = preg_replace( '/^(.*\.)?(.+\..+)$/', '$2', parse_url( get_site_url(), PHP_URL_HOST ) );
+
+        if( $useConfig && self::$_options['domain'] ) {
+            $topDomain = self::$_options['domain'];
+        }
+
+        if( isset( self::$_domains[ $topDomain ] ) ) {
+            return $topDomain;
+        }
+
+        return false;
     }
 }
 UMichCookieConsent::init();

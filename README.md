@@ -40,6 +40,14 @@ add_action( 'umich_cookie_consent_denied', function( $status ){
 });
 ```
 
+### Filters
+**umich_cc_onetrust_code**
+```
+add_filter( 'umich_cc_onetrust_code', function( $code ){
+    return $code;
+});
+```
+
 ### OneTrust Cookie Library
 UMOneTrust
 
