@@ -57,8 +57,7 @@ class UMichCookieConsent
             });
         }
 
-        self::$_options = array_replace_recursive(
-            [
+        self::$_options = array_replace_recursive([
                 'mode'   => 'prod',
                 'domain' => ''
             ],
