@@ -3,7 +3,7 @@
  * Plugin Name: University of Michigan: Cookie Consent
  * Plugin URI: https://github.com/umdigital/umich-cookie-consent/
  * Description: Show GDPR compliant cookie consent message to EU gelocated users.
- * Version: 2.0.5
+ * Version: 2.0.6
  * Author: U-M: Digital
  * Author URI: http://vpcomm.umich.edu
  * Update URI: https://github.com/umdigital/umich-cookie-consent/releases/latest
@@ -58,7 +58,10 @@ class UMichCookieConsent
         }
 
         self::$_options = array_replace_recursive(
-            [ 'mode' => 'prod' ],
+            [
+                'mode'   => 'prod',
+                'domain' => ''
+            ],
             get_option( 'umich_cc_options' ) ?: []
         );
 
