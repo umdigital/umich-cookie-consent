@@ -115,7 +115,7 @@ class UMichCookieConsent
             }
 
             echo "\n";
-            echo '<script async src="https://stubbe.gateway.umwebops.org/apis/umconsentmanager/consentmanager.js"></script>';
+            echo '<script async src="https://umich.edu/apis/umconsentmanager/consentmanager.js"></script>';
             echo "\n";
         });
 
