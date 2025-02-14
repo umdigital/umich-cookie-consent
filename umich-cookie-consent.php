@@ -3,8 +3,8 @@
  * Plugin Name: University of Michigan: Cookie Consent
  * Plugin URI: https://github.com/umdigital/umich-cookie-consent/
  * Description: Show GDPR compliant cookie consent message to EU gelocated users.
- * Version: 2.0.7
- * Author: U-M: Digital
+ * Version: 3.0.0
+ * Author: U-M: Digital Strategy
  * Author URI: http://vpcomm.umich.edu
  * Update URI: https://github.com/umdigital/umich-cookie-consent/releases/latest
  */
@@ -15,26 +15,20 @@ class UMichCookieConsent
 {
     static private $_domains = [
         'umich.edu'      => [
-            'code'    => '03e0096b-3569-4b70-8a31-918e55aa20da',
             'privacy' => 'https://umich.edu/about/privacy/',
         ],
         'umflint.edu'    => [
-            'code'    => '018f776d-a3b7-74f3-8fec-065496d9a96f',
             'privacy' => 'https://umflint.edu/about/privacy/',
         ],
         'umdearborn.edu' => [
-            'code'    => '018f779a-dc12-7048-a377-bb381a930bf2',
             'privacy' => 'https://umdearborn.edu/privacy-policy',
         ]
     ];
     static private $_options = [];
+    static private $_cookieName = 'um_cookie_consent';
 
     static public function init()
     {
-        if( !class_exists( 'UMOneTrust' ) ) {
-            include_once UMCOOKIECONSENT_PATH .'includes'. DIRECTORY_SEPARATOR .'umonetrust.php';
-        }
-
         // load updater library
         if( file_exists( UMCOOKIECONSENT_PATH . implode( DIRECTORY_SEPARATOR, [ 'vendor', 'umdigital', 'wordpress-github-updater', 'github-updater.php' ] ) ) ) {
             include UMCOOKIECONSENT_PATH . implode( DIRECTORY_SEPARATOR, [ 'vendor', 'umdigital', 'wordpress-github-updater', 'github-updater.php' ] );
@@ -58,75 +52,70 @@ class UMichCookieConsent
         }
 
         self::$_options = array_replace_recursive([
-                'mode'   => 'prod',
-                'domain' => ''
+                'mode'                => 'prod',
+                'privacy_url'         => '',
+                'google_analytics_id' => '',
+                'custom'              => '',
+                'always_show'         => '',
+                'domain'              => ''
             ],
             get_option( 'umich_cc_options' ) ?: []
         );
 
+        if( self::$_options['custom'] ) {
+            $domain = self::$_options['domain'] ?: $_SERVER['HTTP_HOST'];
+
+            if( function_exists( 'hash' ) && in_array( 'sha1', hash_algos() ) ) {
+                self::$_cookieName .= '_'. hash( 'sha1', $domain );
+            }
+            else if( function_exists( 'sha1' ) ) {
+                self::$_cookieName .= '_'. sha1( $domain );
+            }
+        }
+
         // force script(s) as high up as possible
         add_action( 'wp_head', function(){
-            $topDomain = self::_detectDomain( true );
+            $params = [];
 
-            $otCode = false;
-
-            if( isset( self::$_domains[ $topDomain ]['code'] ) ) {
-                $otCode = self::$_domains[ $topDomain ]['code'];
-            }
-
-            $otCode = apply_filters( 'umich_cc_onetrust_code', $otCode, $topDomain );
-
-            if( self::$_options['mode'] != 'prod' ) {
-                if( !$otCode ) {
-                    $otCode = self::$_domains['umich.edu']['code'];
+            if( self::$_options['mode'] == 'dev' ) {
+                if( !is_user_logged_in() ) {
+                    return;
                 }
 
-                $otCode .= '-test';
+                $params['mode'] = self::$_options['mode'];
             }
 
-            if( !$otCode ) {
-                return;
+            if( self::$_options['privacy_url'] ) {
+                $params['privacyUrl'] = self::$_options['privacy_url'];
+            }
+
+            if( self::$_options['google_analytics_id'] ) {
+                $params['googleAnalyticsID'] = self::$_options['google_analytics_id'];
+            }
+
+            if( self::$_options['custom'] ) {
+                $params['customManager'] = [];
+
+                $params['customManager']['enabled'] = true;
+
+                if( self::$_options['always_show'] ) {
+                    $params['customManager']['alwaysShow'] = true;
+                }
+
+                if( self::$_options['domain'] && (count(explode('.', self::$_options['domain'])) != 2) ) {
+                    $params['customManager']['rootDomain'] = self::$_options['domain'];
+                }
+            }
+
+            $params = apply_filters( 'umich_cc_js_params', $params, self::$_options );
+
+            if( $params ) {
+                echo "\n";
+                echo '<script>window.umConsentManager = '. json_encode( $params ) .';</script>';
             }
 
             echo "\n";
-            echo '<script src="https://cdn.cookielaw.org/consent/'. $otCode .'/otSDKStub.js"  type="text/javascript" charset="UTF-8" data-domain-script="'. $otCode .'" ></script>';
-            echo "\n";
-            echo '<script type="text/javascript">
-            function OptanonWrapper(){
-                // performance
-                if( OnetrustActiveGroups.includes("C0002") ) {
-                    gtag( "consent", "update", {
-                        analytics_storage: "granted"
-                    });
-                }
-                // functional
-                if( OnetrustActiveGroups.includes("C0003") ) {
-                    gtag( "consent", "update", {
-                        functional_storage: "granted"
-                    });
-                }
-                // targeting
-                if( OnetrustActiveGroups.includes("C0004") ) {
-                    gtag( "consent", "update", {
-                        ad_storage             : "granted",
-                        ad_user_data           : "granted",
-                        ad_personalization     : "granted",
-                        personalization_storage: "granted"
-                    });
-                }
-                else {
-                    document.cookie.split(";").forEach( (cookie) => {
-                        const [ name ] = cookie.split("=");
-                        if( name.trim().match( /^_ga(_.+)?$/ ) ) {
-                            document.cookie = name + "=;path=/;domain=.'. $topDomain .';expires=Thu, 01 Jan 1970 00:00:01 GMT";
-                        }
-                    });
-                }
-
-                // trigger event for use in Tag Manager
-                window.dataLayer.push({ event: "um_consent_updated" });
-            };
-            </script>';
+            echo '<script async src="https://stubbe.gateway.umwebops.org/apis/umconsentmanager/consentmanager.js"></script>';
             echo "\n";
         });
 
@@ -148,12 +137,15 @@ class UMichCookieConsent
             });', 'before' );
         }, 30 );
 
+        // get cookie data
+        $cookieData = isset( $_COOKIE[ self::$_cookieName ] ) ? json_decode( $_COOKIE[ self::$_cookieName ] ) : false;
+
         // check for cookie consent cookie and execute appropriate action
-        if( UMOneTrust::get('targeting') ) {
-            do_action( 'umich_cookie_consent_allowed', UMOneTrust::get() );
+        if( $cookieData && is_array( $cookieData->categories ) && in_array( 'analytics', $cookieData->categories ) ) {
+            do_action( 'umich_cookie_consent_allowed', $cookieData );
         }
         else {
-            do_action( 'umich_cookie_consent_denied', UMOneTrust::get() );
+            do_action( 'umich_cookie_consent_denied', $cookieData );
         }
 
         // default the privacy url
@@ -175,6 +167,10 @@ class UMichCookieConsent
         add_action( 'admin_notices', function(){
             if( self::$_options['mode'] != 'prod' ) {
                 echo '<div class="error notice"><h3>NOTICE</h3><p>U-M: Cookie Consent plugin is currently in development mode. <a href="'. admin_url( 'options-general.php?page=umich-cc' ) .'">Manage Settings</a></p></div>';
+            }
+
+            if( !preg_match( '/'. preg_quote( self::$_options['domain'] ) .'$/', $_SERVER['HTTP_HOST'] ) ) {
+                echo '<div class="error notice"><h3>NOTICE</h3><p>U-M: Cookie Consent plugin is currently configured with the domain "'. self::$_options['domain'] .'" however the current domain is "'. $_SERVER['HTTP_HOST'] .'" the plugin will not work correctly with this setting. The selected parent domain must be the current domain or a parent of the current domain.</p></div>';
             }
         });
 
@@ -201,12 +197,24 @@ class UMichCookieConsent
                 'administrator',
                 'umich-cc',
                 function(){
-                    $umCCOptions    = self::$_options;
-                    $umCCDomains    = array_keys( self::$_domains );
-                    $umCCAutodetect = 'None';
+                    $umCCOptions           = self::$_options;
+                    $umCCDefaultPrivacyUrl = false;
+                    $umCCDomains           = [];
+
+                    // determine selectable domains
+                    $domain = parse_url( get_site_url(), PHP_URL_HOST );
+                    $max    = count( explode( '.', $domain ) ) - 1;
+
+                    for( $i = $max; $i >= 1; $i-- ) {
+                        $umCCDomains[] = array_pop( explode( '.', $domain, $i ) );
+                    }
+
+                    if( self::$_options['domain'] && !in_array( self::$_options['domain'], $umCCDomains ) ) {
+                        $umCCDomains[] = self::$_options['domain'];
+                    }
 
                     if( $topDomain = self::_detectDomain() ) {
-                        $umCCAutodetect = $topDomain;
+                        $umCCDefaultPrivacyUrl = self::$_domains[ $topDomain ]['privacy'];
                     }
 
                     include UMCOOKIECONSENT_PATH .'templates'. DIRECTORY_SEPARATOR .'admin.tpl';

@@ -1,9 +1,11 @@
-Cookie Consent Manager
-======================
+U-M Cookie Consent Manager
+==========================
 [![GitHub release](https://img.shields.io/github/release/umdigital/umich-cookie-consent.svg)](https://github.com/umdigital/umich-cookie-consent/releases/latest)
 [![GitHub issues](https://img.shields.io/github/issues/umdigital/umich-cookie-consent.svg)](https://github.com/umdigital/umich-cookie-consent/issues)
 
-Provides easy way to add GDPR compliant message to your site.  This will only show for IP's geolocated to an EU country.
+Implements the Official [U-M Privacy Manager](https://vpcomm.umich.edu/resources/cookie-disclosure/).
+
+Provides easy way to add GDPR compliant message to your site.  This will by default only show for IP's geolocated to an EU country.
 - Integrates cookie usage with [Google Site Kit](https://wordpress.org/plugins/google-site-kit/) plugin
 
 
@@ -27,7 +29,7 @@ Provides easy way to add GDPR compliant message to your site.  This will only sh
 ### Actions
 **umich_cookie_consent_allowed**
 ```
-add_action( 'umich_cookie_consent_allowed', function( $status ){
+add_action( 'umich_cookie_consent_allowed', function( $cookieData ){
     // your code here to execute when cookies are allowed
 });
 ```
@@ -35,35 +37,17 @@ add_action( 'umich_cookie_consent_allowed', function( $status ){
 
 **umich_cookie_consent_denied**
 ```
-add_action( 'umich_cookie_consent_denied', function( $status ){
+add_action( 'umich_cookie_consent_denied', function( $cookieData ){
     // your code here to execute when cookies are denied
 });
 ```
 
 ### Filters
-**umich_cc_onetrust_code**
+**umich_cc_js_params**
+`$params`: window.umConsentManager documented parameters
+`$options`: plugin saved options used for populating `$params`
 ```
-add_filter( 'umich_cc_onetrust_code', function( $code ){
-    return $code;
+add_filter( 'umich_cc_js_params', function( $params, $options ){
+    return $params;
 });
-```
-
-### OneTrust Cookie Library
-UMOneTrust
-
-**Get Raw Decoded Cookie Value**
-```
-UMOneTrust::get();
-```
-
-**Get Preference Group Value**
-```
-/* return preference value (boolean)
- * Where $group is one of:
- * - required
- * - performance
- * - functional
- * - targeting
- */
-UMOneTrust::get( $group );
 ```
